@@ -1,0 +1,30 @@
+name: LinkedIn WhatsApp Job Alert
+
+on:
+  schedule:
+    - cron: "*/30 * * * *"  # runs every 30 minutes
+  workflow_dispatch:       # manual trigger option
+
+jobs:
+  job_alert:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repo
+        uses: actions/checkout@v3
+
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: 3.11
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+
+      - name: Run job alert
+        env:
+          TWILIO_SID: ${{ secrets.TWILIO_SID }}
+          TWILIO_TOKEN: ${{ secrets.TWILIO_TOKEN }}
+          TO_WHATSAPP: ${{ secrets.TO_WHATSAPP }}
+        run: python main.py
