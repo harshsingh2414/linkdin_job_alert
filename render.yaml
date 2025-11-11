@@ -1,0 +1,5 @@
+services:
+  - type: worker
+    name: linkedin-job-alert
+    env: python
+    startCommand: python main.py
