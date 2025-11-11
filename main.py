@@ -2,9 +2,11 @@ import requests
 from bs4 import BeautifulSoup
 from twilio.rest import Client
 import os
-import time
 from dotenv import load_dotenv
+
+# Load local .env if exists (optional for local testing)
 load_dotenv()
+
 # --- Twilio credentials from Render environment ---
 ACCOUNT_SID = os.getenv("TWILIO_SID")
 AUTH_TOKEN = os.getenv("TWILIO_TOKEN")
@@ -15,7 +17,20 @@ TO_WHATSAPP = os.getenv("TO_WHATSAPP")
 URL = "https://www.linkedin.com/jobs/search/?keywords=fresher%20engineer%20intern&sortBy=DD"
 
 client = Client(ACCOUNT_SID, AUTH_TOKEN)
-seen_jobs = set()
+
+# Persist seen jobs to avoid duplicate messages across runs
+SEEN_FILE = "seen_jobs.txt"
+
+def load_seen_jobs():
+    if os.path.exists(SEEN_FILE):
+        with open(SEEN_FILE, "r") as f:
+            return set(line.strip() for line in f)
+    return set()
+
+def save_seen_jobs(seen_jobs):
+    with open(SEEN_FILE, "w") as f:
+        for job in seen_jobs:
+            f.write(f"{job}\n")
 
 def send_whatsapp_message(job_title, company, link):
     message = f"🆕 *New Job Alert!*\n\n{job_title} at {company}\n🔗 {link}"
@@ -23,6 +38,7 @@ def send_whatsapp_message(job_title, company, link):
     print("✅ WhatsApp alert sent:", job_title)
 
 def check_jobs():
+    seen_jobs = load_seen_jobs()
     headers = {"User-Agent": "Mozilla/5.0"}
     response = requests.get(URL, headers=headers)
     soup = BeautifulSoup(response.text, "html.parser")
@@ -41,12 +57,11 @@ def check_jobs():
                 seen_jobs.add(link)
                 send_whatsapp_message(title, company, link)
 
+    save_seen_jobs(seen_jobs)
+
 if __name__ == "__main__":
-    print("🚀 Job monitor started on Render...")
-    while True:
-        try:
-            check_jobs()
-            time.sleep(300)  # every 5 minutes
-        except Exception as e:
-            print("❌ Error:", e)
-            time.sleep(60)
+    print("🚀 Running LinkedIn job alert...")
+    try:
+        check_jobs()
+    except Exception as e:
+        print("❌ Error:", e)
